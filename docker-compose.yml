@@ -1,0 +1,93 @@
+services:
+  # ========== LLM Servers ==========
+  # Uncomment ONE model to use, comment out others
+
+  # EXAONE-3.5-32B (Korean/Multilingual)
+  exaone-32b:
+    image: lmsysorg/sglang:latest
+    container_name: shared-llm
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_TOKEN=${HF_TOKEN}
+    ports:
+      - "30000:30000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./servers/exaone-32b.py:/app/server.py
+    working_dir: /app
+    command: >
+      bash -c "pip install --no-cache-dir accelerate bitsandbytes &&
+      python server.py"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - shared-ai-network
+    restart: unless-stopped
+
+  # Qwen-72B (add servers/qwen-72b.py first)
+  # qwen-72b:
+  #   image: lmsysorg/sglang:latest
+  #   container_name: shared-llm
+  #   runtime: nvidia
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - HF_TOKEN=${HF_TOKEN}
+  #   ports:
+  #     - "30000:30000"
+  #   volumes:
+  #     - ~/.cache/huggingface:/root/.cache/huggingface
+  #     - ./servers/qwen-72b.py:/app/server.py
+  #   working_dir: /app
+  #   command: >
+  #     bash -c "pip install --no-cache-dir accelerate bitsandbytes &&
+  #     python server.py"
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   networks:
+  #     - shared-ai-network
+  #   restart: unless-stopped
+
+  # BGE-M3 Embedding Server (다국어/한국어 지원)
+  # 모든 프로젝트에서 공유 가능
+  embedding:
+    image: lmsysorg/sglang:latest
+    container_name: shared-embedding-bge-m3
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_TOKEN=${HF_TOKEN}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./embedding_server.py:/app/server.py
+    working_dir: /app
+    command: >
+      bash -c "pip install --no-cache-dir sentence-transformers fastapi uvicorn &&
+      python server.py"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - shared-ai-network
+    restart: unless-stopped
+
+networks:
+  shared-ai-network:
+    name: shared-ai-network
+    driver: bridge
