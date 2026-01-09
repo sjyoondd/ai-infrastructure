@@ -2,10 +2,10 @@ services:
   # ========== LLM Servers ==========
   # Uncomment ONE model to use, comment out others
 
-  # EXAONE-3.5-32B (Korean/Multilingual) - SGLang Native Server
-  # Continuous Batching 지원으로 동시 요청 처리 가능
+  # EXAONE-3.5-32B (Korean/Multilingual) - SGLang Spark (Blackwell optimized)
+  # For NVIDIA Spark/Blackwell GPUs (SM 121a)
   exaone-32b:
-    image: lmsysorg/sglang:latest
+    image: lmsysorg/sglang:spark
     container_name: shared-llm
     runtime: nvidia
     environment:
@@ -16,12 +16,11 @@ services:
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
     command: >
-      python -m sglang.launch_server
+      python3 -m sglang.launch_server
       --model LGAI-EXAONE/EXAONE-3.5-32B-Instruct
       --port 30000
       --host 0.0.0.0
       --trust-remote-code
-      --quantization int4
       --mem-fraction-static 0.85
     deploy:
       resources:
@@ -64,32 +63,33 @@ services:
 
   # BGE-M3 Embedding Server (다국어/한국어 지원)
   # 모든 프로젝트에서 공유 가능
-  embedding:
-    image: lmsysorg/sglang:latest
-    container_name: shared-embedding-bge-m3
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - HF_TOKEN=${HF_TOKEN}
-    ports:
-      - "8080:8080"
-    volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface
-      - ./embedding_server.py:/app/server.py
-    working_dir: /app
-    command: >
-      bash -c "pip install --no-cache-dir sentence-transformers fastapi uvicorn &&
-      python server.py"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    networks:
-      - shared-ai-network
-    restart: unless-stopped
+  # DISABLED: Not enough GPU memory when running EXAONE-32B
+  # embedding:
+  #   image: lmsysorg/sglang:latest
+  #   container_name: shared-embedding-bge-m3
+  #   runtime: nvidia
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - HF_TOKEN=${HF_TOKEN}
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - ~/.cache/huggingface:/root/.cache/huggingface
+  #     - ./embedding_server.py:/app/server.py
+  #   working_dir: /app
+  #   command: >
+  #     bash -c "pip install --no-cache-dir sentence-transformers fastapi uvicorn &&
+  #     python server.py"
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   networks:
+  #     - shared-ai-network
+  #   restart: unless-stopped
 
 networks:
   shared-ai-network:
