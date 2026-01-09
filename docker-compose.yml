@@ -2,7 +2,8 @@ services:
   # ========== LLM Servers ==========
   # Uncomment ONE model to use, comment out others
 
-  # EXAONE-3.5-32B (Korean/Multilingual)
+  # EXAONE-3.5-32B (Korean/Multilingual) - SGLang Native Server
+  # Continuous Batching 지원으로 동시 요청 처리 가능
   exaone-32b:
     image: lmsysorg/sglang:latest
     container_name: shared-llm
@@ -14,11 +15,14 @@ services:
       - "30000:30000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
-      - ./servers/exaone-32b.py:/app/server.py
-    working_dir: /app
     command: >
-      bash -c "pip install --no-cache-dir accelerate bitsandbytes &&
-      python server.py"
+      python -m sglang.launch_server
+      --model LGAI-EXAONE/EXAONE-3.5-32B-Instruct
+      --port 30000
+      --host 0.0.0.0
+      --trust-remote-code
+      --quantization int4
+      --mem-fraction-static 0.85
     deploy:
       resources:
         reservations:
